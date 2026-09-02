@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
+using RoomBooking.Api.Assistant;
 using RoomBooking.Api.Authentication;
 using RoomBooking.Api.Errors;
 using RoomBooking.Application.Abstractions;
@@ -59,6 +60,8 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<
+    IReadOnlyCollection<RoomSeedDefinition>>(roomSeeds);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
@@ -72,6 +75,19 @@ builder.Services.Configure<JwtOptions>(
 builder.Services.Configure<ChallengeUserOptions>(
     builder.Configuration.GetSection(
         ChallengeUserOptions.SectionName));
+
+builder.Services.Configure<OpenAiOptions>(
+    builder.Configuration.GetSection(OpenAiOptions.SectionName));
+builder.Services.AddHttpClient<
+        IOpenAiResponsesClient,
+        OpenAiResponsesClient>()
+    .ConfigureHttpClient(client =>
+        client.Timeout = TimeSpan.FromSeconds(60));
+builder.Services.AddSingleton<AssistantConversationStore>();
+builder.Services.AddScoped<
+    IAssistantToolExecutor,
+    AssistantToolExecutor>();
+builder.Services.AddScoped<IAssistantService, AssistantService>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

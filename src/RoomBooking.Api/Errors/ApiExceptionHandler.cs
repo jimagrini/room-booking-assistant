@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using RoomBooking.Api.Assistant;
 using RoomBooking.Application.Common;
 using RoomBooking.Domain.Common;
 
@@ -24,6 +25,11 @@ internal sealed class ApiExceptionHandler(
                 new ApiError(404, notFound.Code, notFound.Message),
             BookingConflictException conflict =>
                 new ApiError(409, conflict.Code, conflict.Message),
+            AssistantException assistant =>
+                new ApiError(
+                    assistant.StatusCode,
+                    assistant.Code,
+                    assistant.Message),
             UnauthorizedAccessException unauthorized =>
                 new ApiError(
                     401,
