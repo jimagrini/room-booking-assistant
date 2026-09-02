@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using RoomBooking.Application.Abstractions;
 using RoomBooking.Application.Common;
@@ -5,11 +6,11 @@ using RoomBooking.Application.Common;
 namespace RoomBooking.Api.Assistant;
 
 public sealed class AssistantService(
-    IOpenAiResponsesClient responsesClient,
+    IAiResponsesClient responsesClient,
     IAssistantToolExecutor toolExecutor,
     AssistantConversationStore conversations,
     ICurrentUser currentUser,
-    IOptions<OpenAiOptions> options,
+    IOptions<AiProviderOptions> options,
     TimeProvider timeProvider)
     : IAssistantService
 {
@@ -41,11 +42,18 @@ public sealed class AssistantService(
             conversationId);
         var instructions = BuildInstructions();
         var toolsUsed = new List<string>();
+        var inputItems = conversation.InputItems
+            .Select(item => item.Clone())
+            .ToList();
+        inputItems.Add(JsonSerializer.SerializeToElement(
+            new
+            {
+                role = "user",
+                content = normalizedMessage
+            }));
         var request = new OpenAiResponseRequest(
             instructions,
-            conversation.PreviousResponseId,
-            normalizedMessage,
-            []);
+            Snapshot(inputItems));
 
         for (var round = 0;
              round < MaxToolRounds;
@@ -55,6 +63,9 @@ public sealed class AssistantService(
                 .CreateResponseAsync(
                     request,
                     cancellationToken);
+            inputItems.AddRange(
+                response.OutputItems.Select(
+                    item => item.Clone()));
 
             if (response.FunctionCalls.Count == 0)
             {
@@ -70,7 +81,7 @@ public sealed class AssistantService(
                 conversations.Update(
                     conversation.ConversationId,
                     userId,
-                    response.Id);
+                    inputItems);
 
                 return new AssistantMessageResponse(
                     conversation.ConversationId,
@@ -80,25 +91,26 @@ public sealed class AssistantService(
                         .ToArray());
             }
 
-            var outputs = new List<OpenAiToolOutput>(
-                response.FunctionCalls.Count);
             foreach (var functionCall
                 in response.FunctionCalls)
             {
                 var output = await toolExecutor.ExecuteAsync(
                     functionCall,
                     cancellationToken);
-                outputs.Add(new OpenAiToolOutput(
-                    functionCall.CallId,
-                    output));
+                inputItems.Add(
+                    JsonSerializer.SerializeToElement(
+                        new
+                        {
+                            type = "function_call_output",
+                            call_id = functionCall.CallId,
+                            output
+                        }));
                 toolsUsed.Add(functionCall.Name);
             }
 
             request = new OpenAiResponseRequest(
                 instructions,
-                response.Id,
-                null,
-                outputs);
+                Snapshot(inputItems));
         }
 
         throw new AssistantException(
@@ -106,6 +118,10 @@ public sealed class AssistantService(
             "assistant.tool_limit_exceeded",
             "The assistant could not complete the request within the tool-call limit.");
     }
+
+    private static IReadOnlyList<JsonElement> Snapshot(
+        IReadOnlyList<JsonElement> items) =>
+        items.Select(item => item.Clone()).ToArray();
 
     private string BuildInstructions()
     {

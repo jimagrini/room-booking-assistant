@@ -8,9 +8,9 @@ namespace RoomBooking.Api.Assistant;
 
 public sealed class OpenAiResponsesClient(
     HttpClient httpClient,
-    IOptions<OpenAiOptions> options,
+    IOptions<AiProviderOptions> options,
     ILogger<OpenAiResponsesClient> logger)
-    : IOpenAiResponsesClient
+    : IAiResponsesClient
 {
     private static readonly JsonSerializerOptions SerializerOptions =
         new(JsonSerializerDefaults.Web);
@@ -22,35 +22,16 @@ public sealed class OpenAiResponsesClient(
         var configuration = options.Value;
         ValidateConfiguration(configuration);
 
-        object input = request.UserMessage is not null
-            ? request.UserMessage
-            : request.ToolOutputs
-                .Select(output => new
-                {
-                    type = "function_call_output",
-                    call_id = output.CallId,
-                    output = output.Output
-                })
-                .ToArray();
-
         var payload = new Dictionary<string, object?>
         {
             ["model"] = configuration.Model,
             ["instructions"] = request.Instructions,
-            ["input"] = input,
+            ["input"] = request.InputItems,
             ["tools"] = AssistantToolCatalog.Definitions,
             ["tool_choice"] = "auto",
             ["parallel_tool_calls"] = false,
-            ["store"] = true,
             ["max_output_tokens"] = 1200
         };
-
-        if (!string.IsNullOrWhiteSpace(
-                request.PreviousResponseId))
-        {
-            payload["previous_response_id"] =
-                request.PreviousResponseId;
-        }
 
         var baseUrl = configuration.BaseUrl.EndsWith('/')
             ? configuration.BaseUrl
@@ -103,9 +84,13 @@ public sealed class OpenAiResponsesClient(
 
             if (!httpResponse.IsSuccessStatusCode)
             {
+                var providerError = ParseProviderError(
+                    responseBody);
                 logger.LogWarning(
-                    "OpenAI Responses API returned status {StatusCode}.",
-                    (int)httpResponse.StatusCode);
+                    "AI Responses API returned status {StatusCode}, code {ErrorCode}: {ErrorMessage}",
+                    (int)httpResponse.StatusCode,
+                    providerError.Code,
+                    providerError.Message);
                 throw new AssistantException(
                     StatusCodes.Status502BadGateway,
                     "assistant.provider_error",
@@ -135,6 +120,8 @@ public sealed class OpenAiResponsesClient(
 
             var functionCalls =
                 new List<OpenAiFunctionCall>();
+            var responseItems =
+                new List<JsonElement>();
             var text = new StringBuilder();
 
             if (root.TryGetProperty(
@@ -146,6 +133,7 @@ public sealed class OpenAiResponsesClient(
                 foreach (var item
                     in outputItems.EnumerateArray())
                 {
+                    responseItems.Add(item.Clone());
                     var type = item.GetProperty("type")
                         .GetString();
 
@@ -208,7 +196,8 @@ public sealed class OpenAiResponsesClient(
                 text.Length == 0
                     ? null
                     : text.ToString(),
-                functionCalls);
+                functionCalls,
+                responseItems);
         }
         catch (JsonException exception)
         {
@@ -220,8 +209,47 @@ public sealed class OpenAiResponsesClient(
         }
     }
 
+    private static ProviderError ParseProviderError(
+        string responseBody)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(
+                responseBody);
+            if (!document.RootElement.TryGetProperty(
+                    "error",
+                    out var error))
+            {
+                return new ProviderError(
+                    "unknown",
+                    "No provider error details were returned.");
+            }
+
+            var code = error.TryGetProperty(
+                    "code",
+                    out var codeElement)
+                ? codeElement.GetString()
+                : null;
+            var message = error.TryGetProperty(
+                    "message",
+                    out var messageElement)
+                ? messageElement.GetString()
+                : null;
+
+            return new ProviderError(
+                code ?? "unknown",
+                message ?? "No provider error message was returned.");
+        }
+        catch (JsonException)
+        {
+            return new ProviderError(
+                "invalid_error_response",
+                "The provider error response was not valid JSON.");
+        }
+    }
+
     private static void ValidateConfiguration(
-        OpenAiOptions configuration)
+        AiProviderOptions configuration)
     {
         if (string.IsNullOrWhiteSpace(
                 configuration.ApiKey))
@@ -229,7 +257,7 @@ public sealed class OpenAiResponsesClient(
             throw new AssistantException(
                 StatusCodes.Status503ServiceUnavailable,
                 "assistant.not_configured",
-                "The OpenAI API key is not configured.");
+                "The AI provider API key is not configured.");
         }
 
         if (string.IsNullOrWhiteSpace(
@@ -242,7 +270,11 @@ public sealed class OpenAiResponsesClient(
             throw new AssistantException(
                 StatusCodes.Status503ServiceUnavailable,
                 "assistant.configuration_invalid",
-                "The OpenAI configuration is invalid.");
+                "The AI provider configuration is invalid.");
         }
     }
+
+    private sealed record ProviderError(
+        string Code,
+        string Message);
 }

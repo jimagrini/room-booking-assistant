@@ -21,10 +21,9 @@ public sealed class AssistantServiceTests
     public async Task ReplyAsync_WhenModelReturnsText_ReturnsNewConversation()
     {
         var client = new FakeResponsesClient(
-            new OpenAiResponse(
+            TextResponse(
                 "response-1",
-                "¿En qué horario necesitás la sala?",
-                []));
+                "¿En qué horario necesitás la sala?"));
         var service = CreateService(
             client,
             new FakeToolExecutor(),
@@ -41,28 +40,26 @@ public sealed class AssistantServiceTests
             result.Message);
         Assert.Empty(result.ToolsUsed);
         Assert.Single(client.Requests);
+        var userInput = Assert.Single(
+            client.Requests[0].InputItems);
         Assert.Equal(
             "Necesito una sala",
-            client.Requests[0].UserMessage);
+            userInput.GetProperty("content").GetString());
     }
 
     [Fact]
     public async Task ReplyAsync_WhenModelCallsTool_ExecutesLoop()
     {
         var client = new FakeResponsesClient(
-            new OpenAiResponse(
+            ToolResponse(
                 "response-1",
-                null,
-                [
-                    new OpenAiFunctionCall(
-                        "call-1",
-                        "list_my_bookings",
-                        """{"include_cancelled":false}""")
-                ]),
-            new OpenAiResponse(
+                new OpenAiFunctionCall(
+                    "call-1",
+                    "list_my_bookings",
+                    """{"include_cancelled":false}""")),
+            TextResponse(
                 "response-2",
-                "No tenés reservas activas.",
-                []));
+                "No tenés reservas activas."));
         var toolExecutor = new FakeToolExecutor();
         var service = CreateService(
             client,
@@ -82,28 +79,26 @@ public sealed class AssistantServiceTests
             result.ToolsUsed);
         Assert.Single(toolExecutor.Calls);
         Assert.Equal(2, client.Requests.Count);
-        Assert.Equal(
-            "response-1",
-            client.Requests[1].PreviousResponseId);
-        Assert.Null(client.Requests[1].UserMessage);
-        Assert.Single(client.Requests[1].ToolOutputs);
+        Assert.Equal(3, client.Requests[1].InputItems.Count);
+        var toolOutput = client.Requests[1].InputItems[2];
         Assert.Equal(
             "call-1",
-            client.Requests[1].ToolOutputs[0].CallId);
+            toolOutput.GetProperty("call_id").GetString());
+        Assert.Equal(
+            "function_call_output",
+            toolOutput.GetProperty("type").GetString());
     }
 
     [Fact]
     public async Task ReplyAsync_ContinuesOwnedConversation()
     {
         var client = new FakeResponsesClient(
-            new OpenAiResponse(
+            TextResponse(
                 "response-1",
-                "¿Para cuántas personas?",
-                []),
-            new OpenAiResponse(
+                "¿Para cuántas personas?"),
+            TextResponse(
                 "response-2",
-                "Entendido.",
-                []));
+                "Entendido."));
         var store = new AssistantConversationStore(
             new FixedTimeProvider(Now));
         var service = CreateService(
@@ -119,9 +114,22 @@ public sealed class AssistantServiceTests
             first.ConversationId);
 
         Assert.Equal(2, client.Requests.Count);
+        Assert.Equal(3, client.Requests[1].InputItems.Count);
         Assert.Equal(
-            "response-1",
-            client.Requests[1].PreviousResponseId);
+            "Necesito una sala",
+            client.Requests[1].InputItems[0]
+                .GetProperty("content")
+                .GetString());
+        Assert.Equal(
+            "message",
+            client.Requests[1].InputItems[1]
+                .GetProperty("type")
+                .GetString());
+        Assert.Equal(
+            "Para cinco personas",
+            client.Requests[1].InputItems[2]
+                .GetProperty("content")
+                .GetString());
     }
 
     [Fact]
@@ -131,10 +139,9 @@ public sealed class AssistantServiceTests
             new FixedTimeProvider(Now));
         var user1Service = CreateService(
             new FakeResponsesClient(
-                new OpenAiResponse(
+                TextResponse(
                     "response-1",
-                    "Decime el horario.",
-                    [])),
+                    "Decime el horario.")),
             new FakeToolExecutor(),
             store,
             User1Id);
@@ -246,7 +253,7 @@ public sealed class AssistantServiceTests
     }
 
     private static AssistantService CreateService(
-        IOpenAiResponsesClient client,
+        IAiResponsesClient client,
         IAssistantToolExecutor toolExecutor,
         AssistantConversationStore store,
         Guid userId)
@@ -259,7 +266,7 @@ public sealed class AssistantServiceTests
             store,
             new FakeCurrentUser(userId),
             Options.Create(
-                new OpenAiOptions
+                new AiProviderOptions
                 {
                     OfficeTimeZone = "UTC"
                 }),
@@ -268,7 +275,7 @@ public sealed class AssistantServiceTests
 
     private sealed class FakeResponsesClient(
         params OpenAiResponse[] responses)
-        : IOpenAiResponsesClient
+        : IAiResponsesClient
     {
         private readonly Queue<OpenAiResponse> _responses =
             new(responses);
@@ -283,6 +290,52 @@ public sealed class AssistantServiceTests
             Requests.Add(request);
             return Task.FromResult(_responses.Dequeue());
         }
+    }
+
+    private static OpenAiResponse TextResponse(
+        string id,
+        string text)
+    {
+        var output = JsonSerializer.SerializeToElement(
+            new
+            {
+                type = "message",
+                role = "assistant",
+                content = new[]
+                {
+                    new
+                    {
+                        type = "output_text",
+                        text
+                    }
+                }
+            });
+
+        return new OpenAiResponse(
+            id,
+            text,
+            [],
+            [output]);
+    }
+
+    private static OpenAiResponse ToolResponse(
+        string id,
+        OpenAiFunctionCall call)
+    {
+        var output = JsonSerializer.SerializeToElement(
+            new
+            {
+                type = "function_call",
+                call_id = call.CallId,
+                name = call.Name,
+                arguments = call.Arguments
+            });
+
+        return new OpenAiResponse(
+            id,
+            null,
+            [call],
+            [output]);
     }
 
     private sealed class FakeToolExecutor

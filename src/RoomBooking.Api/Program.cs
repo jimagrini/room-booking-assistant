@@ -76,10 +76,10 @@ builder.Services.Configure<ChallengeUserOptions>(
     builder.Configuration.GetSection(
         ChallengeUserOptions.SectionName));
 
-builder.Services.Configure<OpenAiOptions>(
-    builder.Configuration.GetSection(OpenAiOptions.SectionName));
+builder.Services.Configure<AiProviderOptions>(
+    builder.Configuration.GetSection(AiProviderOptions.SectionName));
 builder.Services.AddHttpClient<
-        IOpenAiResponsesClient,
+        IAiResponsesClient,
         OpenAiResponsesClient>()
     .ConfigureHttpClient(client =>
         client.Timeout = TimeSpan.FromSeconds(60));
