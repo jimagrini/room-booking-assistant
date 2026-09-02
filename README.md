@@ -6,7 +6,13 @@ The application allows authenticated users to create and cancel reservations, di
 
 ## Project status
 
-The project is currently in the architecture and domain-design phase.
+The backend booking workflow, PostgreSQL persistence, JWT authentication, REST API, and conversational assistant are implemented. Frontend integration, deployment, and the evaluation notebook remain in progress.
+
+## AI provider
+
+The assistant uses Groq through its OpenAI-compatible Responses API, with `openai/gpt-oss-20b` as the default model. Groq's Responses API is stateless, so conversation history is isolated by authenticated user and retained in the application for two hours.
+
+Provide the Groq secret at runtime through the `AI__ApiKey` environment variable. Never commit API keys or put them in `appsettings.json`.
 
 ## Core requirements
 
