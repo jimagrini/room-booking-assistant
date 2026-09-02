@@ -6,13 +6,25 @@ The application allows authenticated users to create and cancel reservations, di
 
 ## Project status
 
-The backend booking workflow, PostgreSQL persistence, JWT authentication, REST API, and conversational assistant are implemented. Frontend integration, deployment, and the evaluation notebook remain in progress.
+The booking workflow, PostgreSQL persistence, JWT authentication, REST API, conversational assistant, and React web client are implemented. Deployment and the evaluation notebook remain in progress.
 
 ## AI provider
 
 The assistant uses Groq through its OpenAI-compatible Responses API, with `openai/gpt-oss-20b` as the default model. Groq's Responses API is stateless, so conversation history is isolated by authenticated user and retained in the application for two hours.
 
 Provide the Groq secret at runtime through the `AI__ApiKey` environment variable. Never commit API keys or put them in `appsettings.json`.
+
+## Local web client
+
+With the API running at `http://localhost:5139`, start the React client with:
+
+```bash
+cd src/RoomBooking.Web
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`. During local development, Vite proxies API requests to the backend.
 
 ## Core requirements
 
