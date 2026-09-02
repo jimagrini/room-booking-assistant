@@ -134,7 +134,7 @@ public sealed class BookingTests
     }
 
     [Fact]
-    public void Cancel_ByOwner_CancelsBooking()
+    public void Cancel_ByOwner_CancelsBookingAndReleasesSlots()
     {
         var booking = CreateBooking();
         var cancelledAt = CreatedAt.AddHours(1);
@@ -143,6 +143,7 @@ public sealed class BookingTests
 
         Assert.Equal(BookingStatus.Cancelled, booking.Status);
         Assert.Equal(cancelledAt, booking.CancelledAtUtc);
+        Assert.Empty(booking.Slots);
     }
 
     [Fact]

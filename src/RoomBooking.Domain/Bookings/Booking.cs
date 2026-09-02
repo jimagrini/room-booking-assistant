@@ -70,7 +70,7 @@ public sealed class Booking
 
     public DateTimeOffset? CancelledAtUtc { get; private set; }
 
-    public IReadOnlyCollection<BookingSlot> Slots => _slots;
+    public IReadOnlyCollection<BookingSlot> Slots => _slots.AsReadOnly();
 
     public static Booking Create(
         Guid id,
@@ -199,6 +199,10 @@ public sealed class Booking
 
         Status = BookingStatus.Cancelled;
         CancelledAtUtc = cancelledAtUtc;
+
+        // Slot rows represent active occupancy. Removing them frees the room while
+        // the booking itself remains available as cancellation history.
+        _slots.Clear();
     }
 
     private static void EnsureAlignedToSlot(
