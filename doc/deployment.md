@@ -2,6 +2,13 @@
 
 Railway is an explicitly permitted deployment option in the challenge. This setup uses one application service for the React client and ASP.NET Core API, plus one managed PostgreSQL service.
 
+## Live service
+
+- Web application: [room-booking-assistant-production.up.railway.app](https://room-booking-assistant-production.up.railway.app/)
+- Health check: [`/health`](https://room-booking-assistant-production.up.railway.app/health)
+- Production branch: `main`
+- Production smoke test: passed on 2026-09-03
+
 ## Runtime architecture
 
 - The root `Dockerfile` builds the React application with Node.js.
@@ -17,7 +24,7 @@ Keep the application service at one replica. Assistant conversation state is int
 
 1. Sign in to Railway and create a new project.
 2. Choose **Deploy from GitHub repo** and select `jimagrini/room-booking-assistant`.
-3. Use `main` as the production branch after the deployment pull request is merged.
+3. Use `main` as the production branch.
 4. Railway detects the root `Dockerfile`; no custom build or start command is required.
 5. Add **Database → PostgreSQL** to the same project.
 
@@ -29,7 +36,7 @@ Add these variables to the application service, not the PostgreSQL service:
 | --- | --- |
 | `ConnectionStrings__RoomBooking` | `Host=${{Postgres.PGHOST}};Port=${{Postgres.PGPORT}};Database=${{Postgres.PGDATABASE}};Username=${{Postgres.PGUSER}};Password=${{Postgres.PGPASSWORD}};SSL Mode=Require;Trust Server Certificate=true` |
 | `Jwt__SigningKey` | A new random secret of at least 32 characters |
-| `ChallengeUsers__Password` | The password evaluators will use for `User1` and `User2` |
+| `ChallengeUsers__Password` | The password supplied in the private challenge brief |
 | `AI__ApiKey` | A valid Groq API key |
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 
@@ -37,9 +44,9 @@ The application already defaults to:
 
 - `AI__BaseUrl=https://api.groq.com/openai/v1/`
 - `AI__Model=openai/gpt-oss-20b`
-- `AI__OfficeTimeZoneId=America/Montevideo`
+- `AI__OfficeTimeZone=America/Montevideo`
 
-Override them only if the provider or model changes. Do not add secrets to Git, build arguments, logs, screenshots, or the public README.
+Override them only if the provider or model changes. Do not add private secrets to Git, build arguments, logs, screenshots, or the public README.
 
 The Railway reference syntax assumes the PostgreSQL service is named `Postgres`. If it has another name, select each PostgreSQL variable through **Add Reference Variable** so Railway inserts the correct service name.
 
@@ -58,13 +65,15 @@ No `Cors__AllowedOrigin` value is needed in production because the browser and A
 
 Run this flow from the public domain:
 
-1. Sign in as `User1`.
+1. Sign in as `User1` with the password supplied in the challenge brief.
 2. Ask for rooms available at a future date and time for five people.
 3. Reserve one returned room in the same conversation.
 4. List active reservations and confirm the new booking appears.
 5. Cancel that booking.
 6. Ask for availability again and confirm the room was released.
 7. Sign out, sign in as `User2`, and confirm User1's booking history is not exposed.
+
+The production validation on 2026-09-03 completed steps 1-6 successfully. Cross-user isolation is also covered by the automated integration suite.
 
 Also refresh a non-root client route if routes are added later; the SPA fallback should return `index.html`.
 
@@ -77,7 +86,7 @@ docker build -t room-booking-assistant .
 docker run --rm -p 8080:8080 `
   -e ConnectionStrings__RoomBooking="Host=host.docker.internal;Port=5432;Database=room_booking;Username=room_booking;Password=<local-password>" `
   -e Jwt__SigningKey="<new-random-secret-at-least-32-characters>" `
-  -e ChallengeUsers__Password="<challenge-password>" `
+  -e ChallengeUsers__Password="<password-from-the-challenge-brief>" `
   -e AI__ApiKey="<groq-api-key>" `
   room-booking-assistant
 ```
