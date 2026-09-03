@@ -121,13 +121,14 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 app.UseExceptionHandler();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -136,6 +137,7 @@ app.MapGet(
         "/health",
         () => Results.Ok(new { status = "healthy" }))
     .AllowAnonymous();
+app.MapFallbackToFile("index.html");
 
 await app.Services.InitializeDatabaseAsync(roomSeeds);
 app.Run();
