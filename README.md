@@ -8,6 +8,7 @@ The application allows authenticated users to discover available rooms, create a
 
 - Web application: [room-booking-assistant-production.up.railway.app](https://room-booking-assistant-production.up.railway.app/)
 - Health check: [`/health`](https://room-booking-assistant-production.up.railway.app/health)
+- Evaluation notebook: [`doc/RoomBookingAssistant.ipynb`](doc/RoomBookingAssistant.ipynb)
 
 ### Challenge users
 
@@ -18,7 +19,7 @@ The application allows authenticated users to discover available rooms, create a
 
 ## Project status
 
-The complete booking workflow, PostgreSQL persistence, JWT authentication, REST API, conversational assistant, React web client, and Railway deployment are implemented and validated. The evaluation notebook remains as the final project deliverable.
+The complete booking workflow, PostgreSQL persistence, JWT authentication, REST API, conversational assistant, React web client, Railway deployment, and evaluation notebook are implemented and validated. The repository is ready for final delivery.
 
 ## Features and business rules
 
@@ -109,6 +110,7 @@ Last validated on 2026-09-03:
 - The React production build and ESLint completed successfully.
 - The production Docker image built successfully.
 - The Railway smoke test covered health, login, availability, conversational booking, active-booking history, cancellation, and released availability.
+- The evaluation notebook was validated as nbformat 4.5; all executable Python cells pass syntax validation and contain no saved credentials or outputs.
 
 ## Example prompts
 
@@ -132,6 +134,7 @@ Detailed scope and decisions are available under [`doc/`](doc/):
 - [Technical definition](doc/technical-definition.md)
 - [Assumptions and open questions](doc/assumptions-and-open-questions.md)
 - [Railway deployment](doc/deployment.md)
+- [Technology and evaluation notebook](doc/RoomBookingAssistant.ipynb)
 
 ## Design principle
 
