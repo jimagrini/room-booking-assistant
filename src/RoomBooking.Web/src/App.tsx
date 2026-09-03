@@ -74,7 +74,7 @@ function readStoredSession(): LoginResponse | null {
 
 function inlineMarkdown(text: string): ReactNode[] {
   return text
-    .split(/(\*\*.*?\*\*|`.*?`)/g)
+    .split(/(\*\*.*?\*\*|\*[^*]+\*|`.*?`)/g)
     .filter(Boolean)
     .map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
@@ -83,6 +83,10 @@ function inlineMarkdown(text: string): ReactNode[] {
 
       if (part.startsWith('`') && part.endsWith('`')) {
         return <code key={`${part}-${index}`}>{part.slice(1, -1)}</code>
+      }
+
+      if (part.startsWith('*') && part.endsWith('*')) {
+        return <em key={`${part}-${index}`}>{part.slice(1, -1)}</em>
       }
 
       return part
