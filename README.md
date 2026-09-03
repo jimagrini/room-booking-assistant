@@ -6,7 +6,7 @@ The application allows authenticated users to create and cancel reservations, di
 
 ## Project status
 
-The booking workflow, PostgreSQL persistence, JWT authentication, REST API, conversational assistant, and React web client are implemented. Deployment and the evaluation notebook remain in progress.
+The booking workflow, PostgreSQL persistence, JWT authentication, REST API, conversational assistant, React web client, and Railway deployment configuration are implemented. The live deployment and evaluation notebook remain in progress.
 
 ## AI provider
 
@@ -25,6 +25,12 @@ npm run dev
 ```
 
 Open `http://localhost:5173`. During local development, Vite proxies API requests to the backend.
+
+## Deployment
+
+The root `Dockerfile` builds the React client and ASP.NET Core API into one production container. The API serves the compiled SPA and connects to a Railway PostgreSQL service.
+
+See [Railway deployment](doc/deployment.md) for the exact variables, health check, domain, and verification steps.
 
 ## Core requirements
 
