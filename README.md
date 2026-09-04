@@ -45,7 +45,7 @@ The production API serves the compiled React application, so browser and API req
 
 The assistant uses Groq with `openai/gpt-oss-20b` as the default model. Groq's Responses API is stateless, so the application supplies the isolated conversation history on each request.
 
-Provide the Groq secret at runtime through the `AI__ApiKey` environment variable. Never commit API keys or put them in `appsettings.json`.
+Provide the Groq secret at runtime through the `AI__ApiKey` environment variable. 
 
 ## Local development
 
@@ -104,7 +104,6 @@ Pop-Location
 docker build -t room-booking-assistant .
 ```
 
-Last validated on 2026-09-03:
 
 - 34 automated tests passed; 0 failed and 0 skipped.
 - The React production build and ESLint completed successfully.
