@@ -56,11 +56,15 @@ Tool inputs and outputs must use typed schemas. Tool results should return stabl
 
 ## 6. Data model
 
-### User
+The relational database contains rooms, bookings, and protected booking slots. The two fixed challenge users are runtime authentication identities rather than persisted application accounts.
+
+### ChallengeUser (runtime only)
 
 - `Id`
 - `Username`
 - `PasswordHash`
+
+The shared password is read from runtime configuration and hashed in memory when the application starts.
 
 ### Room
 
@@ -137,6 +141,6 @@ Given two requests attempt to reserve the same room slot concurrently, exactly o
 - The application can be started from a clean checkout using documented commands.
 - A deployed URL and health check are available.
 - No secrets are present in Git history.
-- The README contains credentials for challenge users, setup, architecture summary, sample prompts, test instructions, and deployment URL.
-- `/doc` contains the project overview, component diagram, decision log, and runnable notebook.
+- The README identifies the challenge users, explains how to provide the private password at runtime, and contains setup, architecture, sample prompts, test instructions, and the deployment URL.
+- `/doc` contains the project overview and development journey, component diagram, complete question-to-response flow, resolved decision record, and runnable notebook.
 
