@@ -128,9 +128,10 @@ See [Railway deployment](doc/deployment.md) for the variables, health check, net
 
 ## Documentation
 
-Detailed scope and decisions are available under [`doc/`](doc/):
+The required project overview, development journey, end-to-end component flow, decisions, deployment steps, and executable examples are available under [`doc/`](doc/):
 
-- [Architecture](doc/architecture.md)
+- [Project overview and development journey](doc/project-overview.md)
+- [Architecture and complete conversational flow](doc/architecture.md)
 - [Technical definition](doc/technical-definition.md)
 - [Assumptions and open questions](doc/assumptions-and-open-questions.md)
 - [Railway deployment](doc/deployment.md)
